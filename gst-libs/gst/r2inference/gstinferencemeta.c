@@ -23,7 +23,7 @@ static gboolean gst_inference_meta_transform (GstBuffer * transbuf,
     GstMeta * meta, GstBuffer * buffer, GQuark type, gpointer data);
 /* static void gst_inference_children_copy (GNode * node, gpointer data); */
 static gboolean gst_inference_meta_transfer (GstBuffer * transbuf,
-    GstMeta * meta, GstBuffer * buffer, GstVideoMetaTransform * data);
+    GstMeta * meta, GstBuffer * buffer);
 
 static void gst_detection_meta_free (GstMeta * meta, GstBuffer * buffer);
 static gboolean gst_detection_meta_init (GstMeta * meta,
@@ -520,14 +520,15 @@ gst_inference_children_copy (GNode * node, gpointer data)
 static gboolean
 gst_inference_transfer_prediction (GNode * node, gpointer data)
 {
-  GNode *snode = (GNode *) data;
-  Prediction *sroot;
-  Prediction *droot = (Prediction *) node->data;
 
-  g_return_val_if_fail (snode != NULL, TRUE);
+  Prediction *sroot = (Prediction *) data;
+  Prediction *droot = (Prediction *) node->data;
+  GNode *snode = NULL;
+
+  g_return_val_if_fail (sroot != NULL, TRUE);
   g_return_val_if_fail (droot != NULL, TRUE);
 
-  sroot = (Prediction *) snode->data;
+  snode = (GNode *) sroot->node;
 
   /* Transfer prediction only if ID is the same */
   if (sroot->id == droot->id) {
@@ -569,7 +570,7 @@ gst_inference_transfer_prediction (GNode * node, gpointer data)
 
 static gboolean
 gst_inference_meta_transfer (GstBuffer * dest,
-    GstMeta * meta, GstBuffer * buffer, GstVideoMetaTransform * trans)
+    GstMeta * meta, GstBuffer * buffer)
 {
   GstInferenceMeta *dmeta, *smeta;
   Prediction *droot, *sroot;
@@ -577,7 +578,6 @@ gst_inference_meta_transfer (GstBuffer * dest,
   g_return_val_if_fail (dest, FALSE);
   g_return_val_if_fail (meta, FALSE);
   g_return_val_if_fail (buffer, FALSE);
-  g_return_val_if_fail (trans, FALSE);
 
   smeta = (GstInferenceMeta *) meta;
   sroot = smeta->prediction;
@@ -607,6 +607,7 @@ gst_inference_meta_transfer (GstBuffer * dest,
     }
   } else {
     /* Transfer the meta */
+    /* TODO: FIX segfault */
     droot = dmeta->prediction;
 
     g_node_traverse (droot->node, G_LEVEL_ORDER, G_TRAVERSE_ALL, -1,
@@ -623,9 +624,8 @@ gst_inference_meta_transform (GstBuffer * dest, GstMeta * meta,
 {
   GST_LOG ("Transforming inference metadata");
 
-  if (GST_VIDEO_META_TRANSFORM_IS_SCALE (type)) {
-    GstVideoMetaTransform *trans = (GstVideoMetaTransform *) data;
-    return gst_inference_meta_transfer (dest, meta, buffer, trans);
+  if (GST_META_TRANSFORM_IS_COPY (type)) {
+    return gst_inference_meta_transfer (dest, meta, buffer);
   }
 
   /* No transform supported */
