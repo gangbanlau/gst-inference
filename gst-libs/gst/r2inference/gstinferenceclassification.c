@@ -62,6 +62,8 @@ gst_inference_classification_new (void)
       (GstMiniObjectCopyFunction) gst_inference_classification_copy, NULL,
       (GstMiniObjectFreeFunction) classification_free);
 
+  g_mutex_init (&self->mutex);
+
   self->class_label = NULL;
   self->probabilities = NULL;
   self->labels = NULL;
@@ -95,6 +97,8 @@ gst_inference_classification_new_full (gint class_id, gdouble class_prob,
 {
   GstInferenceClassification *self = gst_inference_classification_new ();
 
+  GST_INFERENCE_CLASSIFICATION_LOCK (self);
+
   self->class_id = class_id;
   self->class_prob = class_prob;
   self->num_classes = num_classes;
@@ -110,6 +114,8 @@ gst_inference_classification_new_full (gint class_id, gdouble class_prob,
   if (labels) {
     self->labels = g_strdupv (labels);
   }
+
+  GST_INFERENCE_CLASSIFICATION_UNLOCK (self);
 
   return self;
 }
@@ -140,6 +146,8 @@ gst_inference_classification_copy (const GstInferenceClassification * self)
 
   other = gst_inference_classification_new ();
 
+  GST_INFERENCE_CLASSIFICATION_LOCK ((GstInferenceClassification *) self);
+
   other->class_id = self->class_id;
   other->class_prob = self->class_prob;
   other->num_classes = self->num_classes;
@@ -157,6 +165,8 @@ gst_inference_classification_copy (const GstInferenceClassification * self)
     other->labels = g_strdupv (self->labels);
   }
 
+  GST_INFERENCE_CLASSIFICATION_UNLOCK ((GstInferenceClassification *) self);
+
   return other;
 }
 
@@ -165,16 +175,23 @@ gst_inference_classification_to_string (GstInferenceClassification * self,
     gint level)
 {
   gint indent = level * 2;
+  gchar *serial = NULL;
 
   g_return_val_if_fail (self, NULL);
 
-  return g_strdup_printf ("{\n"
+  GST_INFERENCE_CLASSIFICATION_LOCK (self);
+
+  serial = g_strdup_printf ("{\n"
       "%*s  Class : %d/%d\n"
       "%*s  Label : %s\n"
       "%*s  Probability : %f\n"
       "%*s}",
       indent, "", self->class_id, self->num_classes,
       indent, "", self->class_label, indent, "", self->class_prob, indent, "");
+
+  GST_INFERENCE_CLASSIFICATION_UNLOCK (self);
+
+  return serial;
 }
 
 static void
