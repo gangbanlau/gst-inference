@@ -18,6 +18,7 @@ G_BEGIN_DECLS
 
 /**
  * GstInferenceClassification:
+ * @classification_id: a unique id associated to this classification
  * @class_id: the numerical id associated to the assigned class
  * @class_prob: the resulting probability of the assigned
  * class. Typically between 0 and 1
@@ -36,6 +37,7 @@ struct _GstInferenceClassification
   GMutex mutex;
 
   /*<public>*/
+  guint64 classification_id;
   gint class_id;
   gdouble class_prob;
   gchar *class_label;
