@@ -217,6 +217,15 @@ GstInferencePrediction * gst_inference_prediction_find (GstInferencePrediction *
     guint64 id);
 
 /**
+ * gst_inference_prediction_merge:
+ * @src: the source prediction
+ * @dst: the destination prediction
+ *
+ * Copies the extra information from src to dst.
+ */
+void gst_inference_prediction_merge (GstInferencePrediction * src, GstInferencePrediction * dst);
+
+/**
  * GST_INFERENCE_PREDICTION_LOCK:
  * @p: The GstInferencePrediction to lock
  *
